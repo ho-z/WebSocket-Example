@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .params-table {
+            overflow: auto;
+            border-top: 1px solid #ebeef5;
+        }
+        .params-table-item:hover{
+            background-color: #e6ebf5;
+        }
+        .params-table-item {
+            height: 25px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            margin-top: -1px;
+            text-align: left;
+        }
+
+        .param-key {
+            width: 19.94%;
+            float: left;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-right: 1px solid #ddd;
+            text-align: left;
+            height:100%;
+            font-weight:bold;
+            text-indent: 4px;
+        }
+        .param-value {
+            width: 19.94%;
+            float: left;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-right: 1px solid #ddd;
+            text-align: left;
+            height:100%;
+        }
+        .text-width{
+            min-width: 100%;
+            max-width: 100%;
+            min-height: 25px;
+            resize: none;
+            word-wrap:break-word;
+            word-break:break-all;
+            font-size:14px;
+            /*overflow: hidden;*/
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="c-title">
+        <h3>协作编辑</h3>
+    </div>
+    <div class="table-container">
+        <div class="params-table-item">
+            <div class="param-key" >名称</div>
+            <div class="param-key" >年龄</div>
+            <div class="param-key" >性别</div>
+            <div class="param-key" >爱好</div>
+            <div class="param-key" >技能</div>
+        </div>
+        <div class="params-table-item" v-for="(item, index) in tables_info">
+            <div class="param-value">
+                <input  v-model="item.name" class="text-width " @change="inputChange(index, item.name, 'name')"/>
+            </div>
+            <div class="param-value">
+                <input  v-model="item.age" class="text-width " @change="inputChange(index, item.age, 'age')"/>
+            </div>
+            <div class="param-value">
+                <input  v-model="item.gender" class="text-width " @change="inputChange(index, item.gender, 'gender')"/>
+            </div>
+            <div class="param-value">
+                <input  v-model="item.hobby" class="text-width " @change="inputChange(index, item.hobby, 'hobby')"/>
+            </div>
+            <div class="param-value">
+                <input  v-model="item.skill" class="text-width " @change="inputChange(index, item.skill, 'skill')"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    const host = "127.0.0.1:5000"
+    const namespace = "/test";
+    var app = new Vue({
+        el:'#app',
+        data:{
+            tables_info:[
+                {name: "小明", age:18, hobby:"跑步", skill:"跳马", gender:"男"},
+                {name: "小花", age:17, hobby:"唱歌", skill:"跳绳", gender:"女"},
+                {name: "小小", age:16, hobby:"", skill:"", gender:"女"},
+            ],
+            socket:null,
+        },
+        mounted(){
+            this.init_socket();
+            this.recv_msg()
+        },
+        methods:{
+            recv_msg(){
+                let _this = this;
+                _this.socket.on('input-change', function(msg, cb) {
+                    const _index = msg['index']
+                    const forms = msg['forms']
+                    _this.tables_info[_index][forms] = msg['value']
+                });
+            },
+            init_socket(){
+                this.socket = io(host + namespace);
+                let _this = this;
+                _this.socket.on('connect', function() {
+                    _this.socket.emit('my_event', {data: 'I\'m connected!'});
+                });
+
+                _this.socket.on('my_response', function(msg, cb) {
+                    console.log(msg, cb)
+                   if (cb){
+                        cb();
+                   }
+                });
+            },
+            //监听input框变化事键
+            inputChange(index, new_val, forms){
+                const params = {
+                    "index": index,
+                    "value": new_val,
+                    "forms": forms
+                }
+                axios.post('http://127.0.0.1:5000/input-change',params,{
+                                'Content-Type':'application/json'
+                                }
+                )
+                .then(function (response) {
+                    console.log(response);
+                }).catch(function (error) {
+                    console.log(error);
+                });
+            }
+        },
+    })
+</script>
+
+</body>
+</html>
